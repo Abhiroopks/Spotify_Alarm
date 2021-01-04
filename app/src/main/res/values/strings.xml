@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">MyAlarm</string>
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="pick_time">pick time</string>
+    <string name="cancel_all_alarms">Cancel All Alarms</string>
+    <string name="title_activity_music_selector">MusicSelector</string>
+    <!-- Strings used for fragments for navigation -->
+    <string name="first_fragment_label">First Fragment</string>
+    <string name="second_fragment_label">Second Fragment</string>
+    <string name="next">Next</string>
+    <string name="previous">Previous</string>
+
+    <string name="hello_first_fragment">Hello first fragment</string>
+    <string name="hello_second_fragment">Hello second fragment. Arg: %1$s</string>
+    <string name="my_saved_tracks">My Tracks</string>
+    <string name="my_top_tracks">My Favorites</string>
+    <string name="morning_playlist">Morning Playlist</string>
+    <string name="getting_music">Getting Music...</string>
+    <string name="list_user_lib">My Saved Tracks</string>
+    <string name="select_music">Select Music</string>
+    <string name="no_alarms">No alarms saved!</string>
+    <string name="saved_alarms">Saved Alarms</string>
+    <string name="create_new_alarm">Create New Alarm</string>
+</resources>
