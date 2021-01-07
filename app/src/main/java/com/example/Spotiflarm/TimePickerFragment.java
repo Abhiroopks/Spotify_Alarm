@@ -66,15 +66,17 @@ public class TimePickerFragment extends DialogFragment implements TimePickerDial
         // create new alarm
         if (mainActivity.addNewAlarm) {
             Alarm newAlarm = new Alarm(cal);
-            // default values
-            newAlarm.spotify_res_name = "Rise";
-            newAlarm.spotify_res_uri = "spotify:playlist:37i9dQZF1DWUOhRIDwDB7M";
-            newAlarm.enabled = true;
+
             mainActivity.addNewAlarm(newAlarm);
         }
         // change existing alarm
         else {
+            // cancel old alarm
+            mainActivity.cancelAlarm(mainActivity.alarmToChange);
+
             mainActivity.alarmToChange.setTime(cal.getTimeInMillis());
+            // set new alarm
+            mainActivity.scheduleAlarm(mainActivity.alarmToChange);
             mainActivity.timeButtonToChange.setText(mainActivity.alarmToChange.clockTime);
         }
     }

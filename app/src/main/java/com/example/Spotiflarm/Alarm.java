@@ -8,10 +8,14 @@ public class Alarm {
     String spotify_res_name;
     String spotify_res_uri;
     boolean enabled;
+    int request_code;
+    boolean repeating;
+    boolean[] daysOfWeek;
 
     Alarm(Calendar cal){
         this.timeInMillis = cal.getTimeInMillis();
         setClockTime(cal.get(Calendar.HOUR), cal.get(Calendar.MINUTE), cal.get(Calendar.AM_PM) == Calendar.AM ? "AM":"PM");
+
     }
 
     public void setTime(long time){

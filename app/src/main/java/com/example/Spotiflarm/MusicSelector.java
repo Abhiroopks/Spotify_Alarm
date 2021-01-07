@@ -44,11 +44,16 @@ public class MusicSelector extends AppCompatActivity {
     private static final int REQUEST_CODE = 1337;
     String accToken;
     private static SpotifyAppRemote mSpotifyAppRemote;
+    private Alarm alarmToChange;
+    private MainActivity mainActivityInstance;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_music_selector);
+
+        alarmToChange = MainActivity.mainActivityInstance.alarmToChange;
+        mainActivityInstance = MainActivity.mainActivityInstance;
 
         // Get auth token to access spotify Web API
         getAuthToken();
@@ -169,8 +174,16 @@ public class MusicSelector extends AppCompatActivity {
                             public void onClick(View view) {
 
                                 //update alarm object in MainActivity
-                                MainActivity.mainActivityInstance.alarmToChange.spotify_res_uri = uri;
-                                MainActivity.mainActivityInstance.alarmToChange.spotify_res_name = trackname;
+                                alarmToChange.spotify_res_uri = uri;
+                                alarmToChange.spotify_res_name = trackname;
+
+                                // cancel old alarm
+                                mainActivityInstance.cancelAlarm(alarmToChange);
+                                // schedule new alarm
+                                mainActivityInstance.scheduleAlarm(alarmToChange);
+
+
+
                                 //update text of button
                                 MainActivity.mainActivityInstance.musicButtonToChange.setText(trackname);
 
@@ -291,8 +304,11 @@ public class MusicSelector extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
 
-        // stop playing music (if playing) and disconnect remote
-        mSpotifyAppRemote.getPlayerApi().pause();
+        // stop playing
+        if(mSpotifyAppRemote != null) {
+            mSpotifyAppRemote.getPlayerApi().pause();
+        }
+        // disconnect remote
         SpotifyAppRemote.disconnect(mSpotifyAppRemote);
 
     }

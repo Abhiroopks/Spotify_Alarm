@@ -2,13 +2,16 @@ package com.example.Spotiflarm;
 
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.AlarmClock;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
@@ -45,6 +48,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.Random;
@@ -77,8 +81,10 @@ public class MainActivity extends AppCompatActivity {
     int height;
     int width;
     float density;
+    int parentWidth;
+    int daysWidth;
 
-    String[] daysOfWeek;
+    String[] daysOfWeekString;
 
 
     @Override
@@ -88,18 +94,19 @@ public class MainActivity extends AppCompatActivity {
         alarmsLayout = findViewById(R.id.alarmsLayout);
         label = findViewById(R.id.label);
 
+
+
         displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         height = displayMetrics.heightPixels;
         width = displayMetrics.widthPixels;
         density = displayMetrics.density;
-
-        daysOfWeek = new String[]{"M", "T", "W", "T", "F", "S", "S"};
-
-
+        parentWidth = width - Math.round(16*density);
+        daysWidth = parentWidth / 7;
 
 
 
+        daysOfWeekString = new String[]{"M", "T", "W", "T", "F", "S", "S"};
 
         mainActivityInstance = this;
 
@@ -110,17 +117,23 @@ public class MainActivity extends AppCompatActivity {
         // initialize manager
         alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
+        try{
+            AlarmManager.AlarmClockInfo info = alarmManager.getNextAlarmClock();
+            Date date = new Date(info.getTriggerTime());
+            label.append(date.toString());
+        }
+        catch (Exception e){
+            label.append("No alarms set. ");
+        }
+
+
         // Instantiate the RequestQueue.
         queue = Volley.newRequestQueue(this);
 
         // load saved alarms
-        try {
-            loadAlarms();
-            listAlarms();
-        }
-        catch (Exception e){
-            label.append(e.toString());
-        }
+        loadAlarms();
+        listAlarms();
+
     }
 
 
@@ -177,14 +190,12 @@ public class MainActivity extends AppCompatActivity {
         for(int i = 0; i < alarms.size(); i++) {
             addAlarmToScreen(alarms.get(i));
         }
-
     }
 
     // Displays all relevant info of alarm to user
     public void addAlarmToScreen(Alarm alarm){
 
 
-        int parentWidth = width - Math.round(16*density);
 
         // all contents for this alarm will be placed in this
         LinearLayout entry = new LinearLayout(this);
@@ -234,9 +245,11 @@ public class MainActivity extends AppCompatActivity {
         enableSwitch.setOnCheckedChangeListener((compoundButton, b) -> {
             if(b){
                 alarm.enabled = true;
+                scheduleAlarm(alarm);
             }
             else{
                 alarm.enabled = false;
+                cancelAlarm(alarm);
             }
 
         });
@@ -249,12 +262,9 @@ public class MainActivity extends AppCompatActivity {
 
         //TextView finalMusicTextView = musicTextView;
         deleteButton.setOnClickListener(view -> {
+            cancelAlarm(alarm);
             alarms.remove(alarm);
             alarmsLayout.removeView(entry);
-
-            //TODO cancel alarm
-
-
         });
 
         // build col1
@@ -292,14 +302,40 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout daysRow = new LinearLayout(this);
         daysRow.setLayoutParams(layoutParams);
         daysRow.setOrientation(LinearLayout.HORIZONTAL);
-        int dayWidth = parentWidth / 7;
-        layoutParams = new LinearLayout.LayoutParams(dayWidth,LinearLayout.LayoutParams.MATCH_PARENT);
+        layoutParams = new LinearLayout.LayoutParams(daysWidth,LinearLayout.LayoutParams.MATCH_PARENT);
         for(int i = 0; i < 7; i++){
             Button day = new Button(this);
             day.setLayoutParams(layoutParams);
-            day.setText(daysOfWeek[i]);
-            day.setTextColor(Color.WHITE);
+            day.setText(daysOfWeekString[i]);
+            if(alarm.daysOfWeek[i]){
+                day.setTextColor(Color.GREEN);
+            }
+            else{
+                day.setTextColor(Color.WHITE);
+            }
             day.setGravity(Gravity.CENTER);
+            int finalI = i;
+            day.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+
+                    // flip day
+                    alarm.daysOfWeek[finalI] = ! alarm.daysOfWeek[finalI];
+
+                    // change color
+                    if(alarm.daysOfWeek[finalI]){
+                        day.setTextColor(Color.GREEN);
+                    }
+                    else{
+                        day.setTextColor(Color.WHITE);
+                    }
+
+                    // set repeating boolean
+                    alarm.repeating |= alarm.daysOfWeek[finalI];
+
+
+                }
+            });
             daysRow.addView(day);
         }
 
@@ -328,7 +364,18 @@ public class MainActivity extends AppCompatActivity {
     // called by TimePickerFragment to add new alarm
     public void addNewAlarm(Alarm newAlarm){
         try {
+            // default values
+            newAlarm.spotify_res_name = "Rise";
+            newAlarm.spotify_res_uri = "spotify:playlist:37i9dQZF1DWUOhRIDwDB7M";
+            newAlarm.enabled = true;
+            newAlarm.request_code = rand.nextInt();
+            newAlarm.daysOfWeek = new boolean[7];
+            // not repeating by default
+            Arrays.fill(newAlarm.daysOfWeek, false);
+            newAlarm.repeating = false;
+
             alarms.add(newAlarm);
+            scheduleAlarm(newAlarm);
             addAlarmToScreen(newAlarm);
         }
         catch (Exception e){
@@ -340,6 +387,43 @@ public class MainActivity extends AppCompatActivity {
     public void showTimePickerDialog(View view) {
         DialogFragment newFragment = new TimePickerFragment();
         newFragment.show(getSupportFragmentManager(), "timePicker");
+    }
+
+    // cancel alarm with the given request_code
+    public void cancelAlarm(Alarm alarm){
+        Intent intent = new Intent(this, MyBroadcastReceiver.class);
+        //intent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+        //intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+        //intent.putExtra("spotify_res_uri", alarm.spotify_res_uri);
+        intent.setAction("com.example.MyBroadcastReceiver");
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this,alarm.request_code, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        alarmManager.cancel(pendingIntent);
+    }
+
+    // schedules alarm at specific time, with specific request_code
+    public void scheduleAlarm(Alarm alarm){
+
+        Intent intent = new Intent(this, MyBroadcastReceiver.class);
+        intent.putExtra("spotify_res_uri", alarm.spotify_res_uri);
+        intent.putExtra("request_code", alarm.request_code);
+        intent.setAction("com.example.MyBroadcastReceiver");
+        PendingIntent pendingIntent = PendingIntent.getBroadcast(this,alarm.request_code, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+
+        // Alarm Clock way of scheduling (preferred)
+        AlarmManager.AlarmClockInfo info = new AlarmManager.AlarmClockInfo(alarm.timeInMillis, pendingIntent);
+        alarmManager.setAlarmClock(info, pendingIntent);
+
+        // Did this way because alarm clock way doesn't work sometimes.
+        /*
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,alarm.timeInMillis,pendingIntent);
+        }
+        else{
+            alarmManager.setExact(AlarmManager.RTC_WAKEUP,alarm.timeInMillis,pendingIntent);
+        }
+
+         */
     }
 
 
