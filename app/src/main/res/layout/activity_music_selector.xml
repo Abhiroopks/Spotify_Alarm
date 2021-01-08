@@ -10,12 +10,14 @@
     <Button
         android:id="@+id/btnSavedSongs"
         android:layout_width="0dp"
-        android:layout_height="60dp"
+        android:layout_height="0dp"
         android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
+        android:onClick="requestUserLibraryTracks"
         android:text="@string/my_saved_tracks"
         android:textAlignment="center"
         android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="@+id/btnMyFaves"
         app:layout_constraintEnd_toStartOf="@+id/btnMyFaves"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
@@ -23,11 +25,12 @@
 
     <Button
         android:id="@+id/btnMyFaves"
-        android:layout_width="0dp"
-        android:layout_height="60dp"
+        android:layout_width="126dp"
+        android:layout_height="66dp"
         android:layout_marginStart="4dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="4dp"
+        android:onClick="requestUserFavorites"
         android:text="@string/my_top_tracks"
         android:textSize="12sp"
         app:layout_constraintEnd_toStartOf="@+id/btnMorning"
@@ -38,46 +41,46 @@
     <Button
         android:id="@+id/btnMorning"
         android:layout_width="0dp"
-        android:layout_height="60dp"
+        android:layout_height="0dp"
         android:layout_marginTop="8dp"
         android:layout_marginEnd="8dp"
+        android:onClick="requestRisePlaylist"
         android:text="@string/morning_playlist"
         android:textSize="12sp"
+        app:layout_constraintBottom_toBottomOf="@+id/btnMyFaves"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/btnMyFaves"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.core.widget.NestedScrollView
-        android:id="@+id/nestedScrollView"
+    <TextView
+        android:id="@+id/musicListLabel"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="@string/getting_music"
+        android:textAlignment="center"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/btnMyFaves" />
+
+    <ScrollView
+        android:id="@+id/scrollView"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:layout_marginStart="8dp"
         android:layout_marginTop="8dp"
-        android:layout_marginEnd="8dp"
         android:layout_marginBottom="8dp"
-        android:fillViewport="true"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/btnMyFaves">
+        app:layout_constraintTop_toBottomOf="@+id/musicListLabel">
 
         <LinearLayout
             android:id="@+id/verticalLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical">
+            android:orientation="vertical" />
+    </ScrollView>
 
-            <EditText
-                android:id="@+id/musicListLabel"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:autofillHints=""
-                android:ems="10"
-                android:hint="@string/getting_music"
-                android:inputType="textPersonName"
-                android:text="@string/getting_music" />
-
-        </LinearLayout>
-    </androidx.core.widget.NestedScrollView>
 </androidx.constraintlayout.widget.ConstraintLayout>

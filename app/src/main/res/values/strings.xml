@@ -16,6 +16,8 @@
     <string name="morning_playlist">Morning Playlist</string>
     <string name="getting_music">Getting Music...</string>
     <string name="list_user_lib">My Saved Tracks</string>
+    <string name="list_user_top">My Top Tracks</string>
+    <string name="list_rise_playlist">Spotify\'s Rise Playlist</string>
     <string name="create_new_alarm">Create New Alarm</string>
 
 </resources>

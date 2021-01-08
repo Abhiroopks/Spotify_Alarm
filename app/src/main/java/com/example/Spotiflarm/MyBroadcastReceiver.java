@@ -11,11 +11,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.PowerManager;
-import android.util.Log;
-import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
-import androidx.legacy.content.WakefulBroadcastReceiver;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -46,6 +43,7 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
 
         // connect and retrieve the spotify remote
         String spotifyResURI = intent.getStringExtra("spotify_res_uri");
+
 
         connectAppRemote(context,spotifyResURI);
 
@@ -173,8 +171,9 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
 
                     @Override
                     public void onFailure(Throwable throwable) {
-                        throwable.printStackTrace();
+
                     }
+
                 });
     }
 

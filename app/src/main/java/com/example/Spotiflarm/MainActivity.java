@@ -74,7 +74,7 @@ public class MainActivity extends AppCompatActivity {
     public static TextView label;
     private LinearLayout alarmsLayout;
     private Random rand;
-    public ArrayList<Alarm> alarms;
+    private ArrayList<Alarm> alarms;
 
     public static MainActivity mainActivityInstance = null;
     DisplayMetrics displayMetrics;
@@ -94,8 +94,6 @@ public class MainActivity extends AppCompatActivity {
         alarmsLayout = findViewById(R.id.alarmsLayout);
         label = findViewById(R.id.label);
 
-
-
         displayMetrics = new DisplayMetrics();
         getWindowManager().getDefaultDisplay().getMetrics(displayMetrics);
         height = displayMetrics.heightPixels;
@@ -104,12 +102,9 @@ public class MainActivity extends AppCompatActivity {
         parentWidth = width - Math.round(16*density);
         daysWidth = parentWidth / 7;
 
-
-
         daysOfWeekString = new String[]{"M", "T", "W", "T", "F", "S", "S"};
 
         mainActivityInstance = this;
-
 
         // for random request codes of alarms
         rand = new Random(System.currentTimeMillis());
@@ -125,7 +120,6 @@ public class MainActivity extends AppCompatActivity {
         catch (Exception e){
             label.append("No alarms set. ");
         }
-
 
         // Instantiate the RequestQueue.
         queue = Volley.newRequestQueue(this);
@@ -172,10 +166,12 @@ public class MainActivity extends AppCompatActivity {
             if (file.exists()) {
                 Type listType = new TypeToken<ArrayList<Alarm>>() {}.getType();
                 alarms = new Gson().fromJson(new FileReader(file), listType);
-
-            } else {
+                label.append("Read file");
+            }
+            else {
                 file.createNewFile();
                 alarms = new ArrayList<>();
+                label.append("Created new file + array");
             }
 
         }
@@ -414,16 +410,6 @@ public class MainActivity extends AppCompatActivity {
         AlarmManager.AlarmClockInfo info = new AlarmManager.AlarmClockInfo(alarm.timeInMillis, pendingIntent);
         alarmManager.setAlarmClock(info, pendingIntent);
 
-        // Did this way because alarm clock way doesn't work sometimes.
-        /*
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP,alarm.timeInMillis,pendingIntent);
-        }
-        else{
-            alarmManager.setExact(AlarmManager.RTC_WAKEUP,alarm.timeInMillis,pendingIntent);
-        }
-
-         */
     }
 
 
