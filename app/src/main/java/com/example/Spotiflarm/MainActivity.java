@@ -1,33 +1,22 @@
 package com.example.Spotiflarm;
 
-import android.annotation.SuppressLint;
 import android.app.AlarmManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Canvas;
 import android.graphics.Color;
-import android.graphics.ColorFilter;
-import android.graphics.drawable.Drawable;
-import android.os.Build;
 import android.os.Bundle;
-import android.provider.AlarmClock;
 import android.text.TextUtils;
 import android.util.DisplayMetrics;
 import android.view.Gravity;
-import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.LinearLayout;
-import android.widget.Space;
-import android.widget.Switch;
 import android.widget.TableRow;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.SwitchCompat;
 import androidx.fragment.app.DialogFragment;
@@ -35,22 +24,17 @@ import androidx.fragment.app.DialogFragment;
 import com.android.volley.RequestQueue;
 import com.android.volley.toolbox.Volley;
 import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.IOException;
-import java.io.Reader;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
@@ -75,8 +59,9 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout alarmsLayout;
     private Random rand;
     private ArrayList<Alarm> alarms;
+    private Map<Integer, SwitchCompat> enabledMap;
 
-    public static MainActivity mainActivityInstance = null;
+    public static MainActivity mainActivityInstance;
     DisplayMetrics displayMetrics;
     int height;
     int width;
@@ -90,7 +75,9 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
         setContentView(R.layout.activity_main);
+
         alarmsLayout = findViewById(R.id.alarmsLayout);
         label = findViewById(R.id.label);
 
@@ -102,9 +89,11 @@ public class MainActivity extends AppCompatActivity {
         parentWidth = width - Math.round(16*density);
         daysWidth = parentWidth / 7;
 
-        daysOfWeekString = new String[]{"M", "T", "W", "T", "F", "S", "S"};
+        daysOfWeekString = new String[]{"S", "M", "T", "W", "T", "F", "S"};
 
         mainActivityInstance = this;
+
+        enabledMap = new HashMap<>(2);
 
         // for random request codes of alarms
         rand = new Random(System.currentTimeMillis());
@@ -112,21 +101,15 @@ public class MainActivity extends AppCompatActivity {
         // initialize manager
         alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
 
-        try{
-            AlarmManager.AlarmClockInfo info = alarmManager.getNextAlarmClock();
-            Date date = new Date(info.getTriggerTime());
-            label.append(date.toString());
-        }
-        catch (Exception e){
-            label.append("No alarms set. ");
-        }
-
         // Instantiate the RequestQueue.
         queue = Volley.newRequestQueue(this);
 
         // load saved alarms
+
         loadAlarms();
         listAlarms();
+
+
 
     }
 
@@ -136,6 +119,7 @@ public class MainActivity extends AppCompatActivity {
     // When app opens
     protected void onStart() {
         super.onStart();
+
     }
 
 
@@ -143,6 +127,11 @@ public class MainActivity extends AppCompatActivity {
     // When app closes
     protected void onStop() {
         super.onStop();
+
+        saveAlarms();
+    }
+
+    public void saveAlarms(){
         // save alarms array to file
         try {
             FileWriter writer = new FileWriter(new File(getFilesDir(), "alarmsFile.txt"));
@@ -151,8 +140,6 @@ public class MainActivity extends AppCompatActivity {
         } catch (Exception e) {
             //label.append(e.toString());
         }
-
-
     }
 
 
@@ -166,12 +153,12 @@ public class MainActivity extends AppCompatActivity {
             if (file.exists()) {
                 Type listType = new TypeToken<ArrayList<Alarm>>() {}.getType();
                 alarms = new Gson().fromJson(new FileReader(file), listType);
-                label.append("Read file");
+                //label.append("Read file");
             }
             else {
                 file.createNewFile();
                 alarms = new ArrayList<>();
-                label.append("Created new file + array");
+                //label.append("Created new file + array");
             }
 
         }
@@ -186,6 +173,21 @@ public class MainActivity extends AppCompatActivity {
         for(int i = 0; i < alarms.size(); i++) {
             addAlarmToScreen(alarms.get(i));
         }
+    }
+
+    // disables the checkmark if alarm is triggered while application is active
+    public void disableAlarmCheck(int req_code){
+
+        SwitchCompat sw = enabledMap.get(req_code);
+        if(sw != null){
+            label.append("Found switch");
+            sw.setChecked(false);
+        }
+        else{
+            label.append("Not found");
+        }
+
+
     }
 
     // Displays all relevant info of alarm to user
@@ -235,6 +237,10 @@ public class MainActivity extends AppCompatActivity {
         int enableHeight = row1Height / 2;
         layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT,enableHeight);
         SwitchCompat enableSwitch = new SwitchCompat(this);
+
+        // add to map
+        enabledMap.put(alarm.request_code, enableSwitch);
+
         enableSwitch.setLayoutParams(layoutParams);
         enableSwitch.setGravity(Gravity.CENTER);
         enableSwitch.setChecked(alarm.enabled);
@@ -248,6 +254,8 @@ public class MainActivity extends AppCompatActivity {
                 cancelAlarm(alarm);
             }
 
+
+
         });
         // delete button
         Button deleteButton = new Button(this);
@@ -260,7 +268,9 @@ public class MainActivity extends AppCompatActivity {
         deleteButton.setOnClickListener(view -> {
             cancelAlarm(alarm);
             alarms.remove(alarm);
+            enabledMap.remove(alarm.request_code);
             alarmsLayout.removeView(entry);
+
         });
 
         // build col1
@@ -270,7 +280,6 @@ public class MainActivity extends AppCompatActivity {
         // build row1
         row1.addView(timeButton);
         row1.addView(col1);
-
 
 
         // text to show/change spotify resource to play
@@ -326,10 +335,14 @@ public class MainActivity extends AppCompatActivity {
                         day.setTextColor(Color.WHITE);
                     }
 
-                    // set repeating boolean
-                    alarm.repeating |= alarm.daysOfWeek[finalI];
+                    // update daysActive count
 
-
+                    if(alarm.daysOfWeek[finalI]) {
+                        alarm.daysActive ++;
+                    }
+                    else {
+                        alarm.daysActive--;
+                    }
                 }
             });
             daysRow.addView(day);
@@ -361,14 +374,14 @@ public class MainActivity extends AppCompatActivity {
     public void addNewAlarm(Alarm newAlarm){
         try {
             // default values
-            newAlarm.spotify_res_name = "Rise";
+            newAlarm.spotify_res_name = "Rise Playlist";
             newAlarm.spotify_res_uri = "spotify:playlist:37i9dQZF1DWUOhRIDwDB7M";
             newAlarm.enabled = true;
             newAlarm.request_code = rand.nextInt();
             newAlarm.daysOfWeek = new boolean[7];
             // not repeating by default
             Arrays.fill(newAlarm.daysOfWeek, false);
-            newAlarm.repeating = false;
+            newAlarm.daysActive = 0;
 
             alarms.add(newAlarm);
             scheduleAlarm(newAlarm);
@@ -409,6 +422,11 @@ public class MainActivity extends AppCompatActivity {
         // Alarm Clock way of scheduling (preferred)
         AlarmManager.AlarmClockInfo info = new AlarmManager.AlarmClockInfo(alarm.timeInMillis, pendingIntent);
         alarmManager.setAlarmClock(info, pendingIntent);
+
+        saveAlarms();
+
+        Date date = new Date(alarm.timeInMillis);
+        Toast.makeText(this, "SET ALARM AT: " + date.toString(), Toast.LENGTH_SHORT).show();
 
     }
 

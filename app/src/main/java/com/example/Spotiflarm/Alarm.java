@@ -9,7 +9,7 @@ public class Alarm {
     String spotify_res_uri;
     boolean enabled;
     int request_code;
-    boolean repeating;
+    int daysActive;
     boolean[] daysOfWeek;
 
     Alarm(Calendar cal){

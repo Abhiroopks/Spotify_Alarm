@@ -35,18 +35,18 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
 
-        //wake up screen
-        //wakeScreen(context);
 
-        // Open the MainActivity when notif is clicked
-        Intent notifIntent = new Intent(context,MainActivity.class);
 
-        // connect and retrieve the spotify remote
+        // connect and retrieve the spotify remote. Play music.
         String spotifyResURI = intent.getStringExtra("spotify_res_uri");
-
+        int request_code = intent.getIntExtra("request_code",-1);
 
         connectAppRemote(context,spotifyResURI);
 
+
+        /*
+        // Open the MainActivity when notif is clicked
+        Intent notifIntent = new Intent(context,MainActivity.class);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
         if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O){
             NotificationChannel channel = new NotificationChannel("default","Default",NotificationManager.IMPORTANCE_DEFAULT);
@@ -55,6 +55,7 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
 
         notifIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, notifIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+
 
         Notification notification = new NotificationCompat.Builder(context, "default")
                 .setDefaults(Notification.DEFAULT_ALL)
@@ -69,27 +70,28 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
 
         manager.notify(1, notification);
 
+         */
 
-        /*
+
+
+        // load alarms saved in file
         ArrayList<Alarm> alarms = loadAlarms(context);
-        int request_code = intent.getIntExtra("request_code",-1);
-
         // something messed up, can't find file of alarms
         if(alarms == null){
             return;
         }
         // otherwise update alarm / schedule next alarm if necessary
-        Alarm alarm = null;
-
-
+        Alarm alarm;
 
         for(Alarm a : alarms){
 
             // find the same alarm as this one
             if(a.request_code == request_code){
 
+                alarm = a;
+
                 // only look for next alarm to schedule if repeating is set (just means atleast 1 day is activated for repeats)
-                if(alarm.repeating) {
+                if(alarm.daysActive > 0) {
 
                     Calendar currCal = Calendar.getInstance();
                     currCal.setTimeInMillis(alarm.timeInMillis);
@@ -106,7 +108,7 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
                             currCal.set(Calendar.DAY_OF_WEEK, i + 1);
 
                             // in past - advance by 1 week
-                            if (currCal.getTimeInMillis() < alarm.timeInMillis) {
+                            if (currCal.getTimeInMillis() <= alarm.timeInMillis) {
                                 currCal.add(Calendar.MILLISECOND, 7 * 24 * 60 * 60 * 1000);
                             }
 
@@ -133,8 +135,10 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
                 // alarm is not repeating - mark as disabled
                 else{
                     alarm.enabled = false;
+                    if(MainActivity.mainActivityInstance != null){
+                        MainActivity.mainActivityInstance.disableAlarmCheck(request_code);
+                    }
                 }
-
 
                 // break out of outer loop - no need to check for other alarms
                 break;
@@ -144,9 +148,6 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
 
         // write to json file
         saveAlarms(context, alarms);
-
-         */
-
 
     }
 
@@ -214,14 +215,4 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
 
     }
 
-    @SuppressLint("InvalidWakeLockTag")
-    private void wakeScreen(Context context){
-
-        PowerManager pm = (PowerManager) context.getSystemService(POWER_SERVICE);
-
-        // timeout after 30s
-        pm.newWakeLock(PowerManager.ACQUIRE_CAUSES_WAKEUP | PowerManager.PARTIAL_WAKE_LOCK, "myalarm").acquire(30000);
-
-
-    }
 }

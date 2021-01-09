@@ -48,6 +48,7 @@ public class MusicSelector extends AppCompatActivity {
     private String accToken;
     private static SpotifyAppRemote mSpotifyAppRemote;
     private Alarm alarmToChange;
+    private Button musicButtonToChange;
     private MainActivity mainActivityInstance;
     private TextView musicListLabel;
     LinearLayout verticalLayout;
@@ -64,8 +65,9 @@ public class MusicSelector extends AppCompatActivity {
         verticalLayout = findViewById(R.id.verticalLayout);
         scrollView = findViewById(R.id.scrollView);
 
-        alarmToChange = MainActivity.mainActivityInstance.alarmToChange;
         mainActivityInstance = MainActivity.mainActivityInstance;
+        alarmToChange = mainActivityInstance.alarmToChange;
+        musicButtonToChange = mainActivityInstance.musicButtonToChange;
 
         // Get auth token to access spotify Web API
         getAuthToken();
@@ -183,16 +185,12 @@ public class MusicSelector extends AppCompatActivity {
                                 //update alarm object in MainActivity
                                 alarmToChange.spotify_res_uri = uri;
                                 alarmToChange.spotify_res_name = trackname;
+                                musicButtonToChange.setText(trackname);
 
                                 // cancel old alarm
                                 mainActivityInstance.cancelAlarm(alarmToChange);
                                 // schedule new alarm
                                 mainActivityInstance.scheduleAlarm(alarmToChange);
-
-
-
-                                //update text of button
-                                MainActivity.mainActivityInstance.musicButtonToChange.setText(trackname);
 
                                 // play the resource
                                 if(mSpotifyAppRemote == null || !mSpotifyAppRemote.isConnected()){
@@ -339,16 +337,14 @@ public class MusicSelector extends AppCompatActivity {
                                 //update alarm object in MainActivity
                                 alarmToChange.spotify_res_uri = uri;
                                 alarmToChange.spotify_res_name = trackname;
+                                musicButtonToChange.setText(trackname);
+
 
                                 // cancel old alarm
                                 mainActivityInstance.cancelAlarm(alarmToChange);
                                 // schedule new alarm
                                 mainActivityInstance.scheduleAlarm(alarmToChange);
 
-
-
-                                //update text of button
-                                MainActivity.mainActivityInstance.musicButtonToChange.setText(trackname);
 
                                 // play the resource
                                 if(mSpotifyAppRemote == null || !mSpotifyAppRemote.isConnected()){
@@ -491,16 +487,14 @@ public class MusicSelector extends AppCompatActivity {
                                 //update alarm object in MainActivity
                                 alarmToChange.spotify_res_uri = uri;
                                 alarmToChange.spotify_res_name = trackname;
+                                musicButtonToChange.setText(trackname);
+
 
                                 // cancel old alarm
                                 mainActivityInstance.cancelAlarm(alarmToChange);
                                 // schedule new alarm
                                 mainActivityInstance.scheduleAlarm(alarmToChange);
 
-
-
-                                //update text of button
-                                MainActivity.mainActivityInstance.musicButtonToChange.setText(trackname);
 
                                 // play the resource
                                 if(mSpotifyAppRemote == null || !mSpotifyAppRemote.isConnected()){
