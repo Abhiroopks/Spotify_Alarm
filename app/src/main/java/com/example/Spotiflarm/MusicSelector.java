@@ -15,6 +15,7 @@ import com.spotify.android.appremote.api.Connector;
 import com.spotify.android.appremote.api.SpotifyAppRemote;
 import com.spotify.protocol.client.CallResult;
 import com.spotify.protocol.mappers.JsonObject;
+import com.spotify.protocol.types.Empty;
 import com.spotify.protocol.types.Types;
 import com.spotify.sdk.android.auth.AuthorizationClient;
 import com.spotify.sdk.android.auth.AuthorizationRequest;
@@ -610,14 +611,9 @@ public class MusicSelector extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
 
-        // stop playing
+        // stop playing and disconnect after
         if(mSpotifyAppRemote != null) {
-            mSpotifyAppRemote.getPlayerApi().pause();
-            // disconnect remote
-            //SpotifyAppRemote.disconnect(mSpotifyAppRemote);
-
-
-
+            CallResult<Empty> res = mSpotifyAppRemote.getPlayerApi().pause().setResultCallback( empty -> SpotifyAppRemote.disconnect(mSpotifyAppRemote));
         }
 
 

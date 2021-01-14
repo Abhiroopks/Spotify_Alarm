@@ -12,12 +12,14 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.PowerManager;
 
+import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.spotify.android.appremote.api.ConnectionParams;
 import com.spotify.android.appremote.api.Connector;
+import com.spotify.android.appremote.api.PlayerApi;
 import com.spotify.android.appremote.api.SpotifyAppRemote;
 
 import java.io.File;
@@ -32,6 +34,7 @@ import static android.content.Context.POWER_SERVICE;
 
 public class MyBroadcastReceiver extends BroadcastReceiver {
 
+    @RequiresApi(api = Build.VERSION_CODES.O)
     @Override
     public void onReceive(Context context, Intent intent) {
 
@@ -41,7 +44,13 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
         String spotifyResURI = intent.getStringExtra("spotify_res_uri");
         int request_code = intent.getIntExtra("request_code",-1);
 
-        connectAppRemote(context,spotifyResURI);
+        Intent serviceIntent = new Intent(context,SpotifyService.class);
+        serviceIntent.putExtra("spotify_res_uri", spotifyResURI);
+
+        context.startForegroundService(serviceIntent);
+
+
+        //connectAppRemote(context,spotifyResURI);
 
 
         /*
@@ -167,7 +176,7 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
                     @Override
                     public void onConnected(SpotifyAppRemote spotifyAppRemote) {
                         // play the specified resource
-                        spotifyAppRemote.getPlayerApi().play(spotifyResURI);
+                        spotifyAppRemote.getPlayerApi().play(spotifyResURI, PlayerApi.StreamType.ALARM);
                     }
 
                     @Override
