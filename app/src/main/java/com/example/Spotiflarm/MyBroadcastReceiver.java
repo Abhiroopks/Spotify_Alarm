@@ -7,10 +7,15 @@ import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.media.MediaPlayer;
+import android.media.RingtoneManager;
+import android.net.Uri;
 import android.os.Build;
 import android.os.PowerManager;
+import android.widget.Toast;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.app.NotificationCompat;
@@ -21,6 +26,9 @@ import com.spotify.android.appremote.api.ConnectionParams;
 import com.spotify.android.appremote.api.Connector;
 import com.spotify.android.appremote.api.PlayerApi;
 import com.spotify.android.appremote.api.SpotifyAppRemote;
+import com.spotify.android.appremote.internal.SpotifyLocator;
+import com.spotify.protocol.client.CallResult;
+import com.spotify.protocol.types.Empty;
 
 import java.io.File;
 import java.io.FileReader;
@@ -44,16 +52,21 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
         String spotifyResURI = intent.getStringExtra("spotify_res_uri");
         int request_code = intent.getIntExtra("request_code",-1);
 
+        // Start Foreground Service to play music
+        /*
         Intent serviceIntent = new Intent(context,SpotifyService.class);
         serviceIntent.putExtra("spotify_res_uri", spotifyResURI);
 
         context.startForegroundService(serviceIntent);
+         */
 
 
-        //connectAppRemote(context,spotifyResURI);
+        // play music now
+        connectAppRemote(context,spotifyResURI);
 
 
-        /*
+        
+        // Notification - do now
         // Open the MainActivity when notif is clicked
         Intent notifIntent = new Intent(context,MainActivity.class);
         NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -78,9 +91,6 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
                 .build();
 
         manager.notify(1, notification);
-
-         */
-
 
 
         // load alarms saved in file
@@ -144,6 +154,8 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
                 // alarm is not repeating - mark as disabled
                 else{
                     alarm.enabled = false;
+
+                    // in case alarm goes off while app is still open - update in UI
                     if(MainActivity.mainActivityInstance != null){
                         MainActivity.mainActivityInstance.disableAlarmCheck(request_code);
                     }
@@ -151,7 +163,6 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
 
                 // break out of outer loop - no need to check for other alarms
                 break;
-
             }
         }
 
@@ -176,11 +187,19 @@ public class MyBroadcastReceiver extends BroadcastReceiver {
                     @Override
                     public void onConnected(SpotifyAppRemote spotifyAppRemote) {
                         // play the specified resource
-                        spotifyAppRemote.getPlayerApi().play(spotifyResURI, PlayerApi.StreamType.ALARM);
+                        spotifyAppRemote.getPlayerApi().play(spotifyResURI, PlayerApi.StreamType.ALARM).setResultCallback(empty -> {
+                            // disconnect once playing
+                            SpotifyAppRemote.disconnect(spotifyAppRemote);
+                        });
                     }
 
                     @Override
                     public void onFailure(Throwable throwable) {
+                        // play default ringtone if failed
+                        Uri uri = RingtoneManager.getActualDefaultRingtoneUri(context, RingtoneManager.TYPE_ALARM);
+
+                        MediaPlayer player = MediaPlayer.create(context, uri);
+                        player.start();
 
                     }
 

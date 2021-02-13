@@ -180,14 +180,20 @@ public class MainActivity extends AppCompatActivity {
 
         SwitchCompat sw = enabledMap.get(req_code);
         if(sw != null){
-            label.append("Found switch");
+            //label.append("Found switch");
             sw.setChecked(false);
         }
         else{
-            label.append("Not found");
+            label.append("Switch Not found");
         }
 
-
+        // save as disabled
+        for(Alarm alarm : alarms){
+            if(alarm.request_code == req_code){
+                alarm.enabled = false;
+                break;
+            }
+        }
     }
 
     // Displays all relevant info of alarm to user

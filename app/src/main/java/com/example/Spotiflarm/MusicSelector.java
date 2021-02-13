@@ -25,13 +25,16 @@ import com.squareup.picasso.Picasso;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
+import android.text.Editable;
 import android.text.Layout;
 import android.text.TextUtils;
+import android.text.TextWatcher;
 import android.util.AttributeSet;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -52,8 +55,10 @@ public class MusicSelector extends AppCompatActivity {
     private Button musicButtonToChange;
     private MainActivity mainActivityInstance;
     private TextView musicListLabel;
-    LinearLayout verticalLayout;
-    ScrollView scrollView;
+    private LinearLayout verticalLayout;
+    private ScrollView scrollView;
+    private int heightEntry = -1;
+    private EditText searchBar;
 
 
     @Override
@@ -62,6 +67,9 @@ public class MusicSelector extends AppCompatActivity {
         setContentView(R.layout.activity_music_selector);
         // set label for list
         musicListLabel = findViewById(R.id.musicListLabel);
+
+        searchBar = findViewById(R.id.searchBar);
+
         // where to add our spotify resources for user to see
         verticalLayout = findViewById(R.id.verticalLayout);
         scrollView = findViewById(R.id.scrollView);
@@ -75,140 +83,283 @@ public class MusicSelector extends AppCompatActivity {
 
     }
 
+    public void searchBtnHandler(View view){
+        String toSearch = searchBar.getText().toString();
+        if(toSearch.length() < 1){
+            return;
+        }
+
+        // pass base url and access token
+        JsonObjectRequestBuilder builder = new JsonObjectRequestBuilder("https://api.spotify.com/v1/search",accToken);
+        builder.addParam("q", toSearch);
+        // try just tracks for now
+        builder.addParam("type", "track");
+        builder.setOnResponse(response -> {
+            verticalLayout.removeAllViews();
+
+            musicListLabel.setText(R.string.list_search_results);
+
+
+            try {
+                JSONObject tracks = response.getJSONObject("tracks");
+                JSONArray items = tracks.getJSONArray("items");
+
+                for(int i = 0; i < items.length(); i ++){
+                    //JSONObject item = items.getJSONObject(i);
+                    JSONObject track = items.getJSONObject(i);
+                    String trackname = track.getString("name");
+                    JSONArray artists = track.getJSONArray("artists");
+
+                    String uri = track.getString("uri");
+                    JSONObject album = track.getJSONObject("album");
+                    JSONArray images = album.getJSONArray("images");
+                    JSONObject image;
+                    String imageURL = "";
+
+                    // get the first image only
+                    if(images.length() > 0){
+                        image = images.getJSONObject(0);
+                        imageURL = image.getString("url");
+                    }
+
+
+                    // horizontal entry for this track
+                    LinearLayout entry = new LinearLayout(getApplicationContext());
+                    entry.setOrientation(LinearLayout.HORIZONTAL);
+                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightEntry);
+                    layoutParams.setMargins(20 , 20, 20, 20);
+                    entry.setLayoutParams(layoutParams);
+
+
+                    // create text for track title
+                    TextView textview = new TextView(getApplicationContext());
+                    textview.setText(trackname);
+                    layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    layoutParams.setMargins(0, 10, 0, 10);
+                    textview.setLayoutParams(layoutParams);
+                    textview.setTextColor(Color.WHITE);
+
+                    // autoscroll feature - if the text is longer than the length of textview
+                    textview.setHorizontallyScrolling(true);
+                    textview.setSingleLine();
+                    textview.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+                    textview.setMarqueeRepeatLimit(-1);
+                    textview.setSelected(true);
+
+                    // create text for track artists
+                    TextView artisttextview = new TextView(getApplicationContext());
+                    String artistString = "";
+                    for(int j = 0; j < artists.length(); j++){
+                        if(j > 0){
+                            artistString += ", ";
+                        }
+
+                        artistString += artists.getJSONObject(j).getString("name");
+
+                    }
+
+                    artisttextview.setText(artistString);
+                    artisttextview.setLayoutParams(layoutParams);
+                    artisttextview.setTextColor(Color.WHITE);
+
+                    // autoscroll feature - if the text is longer than the length of textview
+                    artisttextview.setHorizontallyScrolling(true);
+                    artisttextview.setSingleLine();
+                    artisttextview.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+                    artisttextview.setMarqueeRepeatLimit(-1);
+                    artisttextview.setSelected(true);
+
+                    // to vertically place track-name and artist-name textviews next to the album photo
+                    LinearLayout innerlayout = new LinearLayout(getApplicationContext());
+                    innerlayout.setOrientation(LinearLayout.VERTICAL);
+                    layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.MATCH_PARENT);
+                    layoutParams.setMargins(20, 0, 0, 0);
+                    innerlayout.setLayoutParams(layoutParams);
+
+                    innerlayout.addView(textview);
+                    innerlayout.addView(artisttextview);
+
+                    ImageView imageView = new ImageView(getApplicationContext());
+                    imageView.setAdjustViewBounds(true);
+                    imageView.setMaxWidth(320);
+
+                    Picasso.get().load(imageURL).fit().placeholder(R.drawable.ic_launcher_foreground).error(R.drawable.ic_launcher_foreground).into(imageView);
+
+                    entry.addView(imageView);
+                    entry.addView(innerlayout);
+
+                    // on click function - play the track
+                    entry.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view1) {
+
+                            //update alarm object in MainActivity
+                            alarmToChange.spotify_res_uri = uri;
+                            alarmToChange.spotify_res_name = trackname;
+                            musicButtonToChange.setText(trackname);
+
+                            // cancel old alarm
+                            mainActivityInstance.cancelAlarm(alarmToChange);
+                            // schedule new alarm
+                            mainActivityInstance.scheduleAlarm(alarmToChange);
+
+                            // play the resource
+                            if(mSpotifyAppRemote == null || !mSpotifyAppRemote.isConnected()){
+                                connectAppRemote(uri);
+                            }
+                            else{
+                                mSpotifyAppRemote.getPlayerApi().play(uri);
+                            }
+                        }
+                    });
+
+                    // add horiz layout to vert layout
+                    verticalLayout.addView(entry);
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+
+
+
+
+
+
+        });
+
+        MainActivity.queue.add(builder.build());
+
+    }
+
     public void requestUserFavorites(View view){
 
         // pass base url and access token
         JsonObjectRequestBuilder builder = new JsonObjectRequestBuilder("https://api.spotify.com/v1/me/top/tracks",accToken);
 
-        builder.setOnResponse(new Response.Listener<JSONObject>() {
-            @Override
-            public void onResponse(JSONObject response) {
+        builder.setOnResponse(response -> {
 
-                verticalLayout.removeAllViews();
+            verticalLayout.removeAllViews();
 
-                int heightEntry = scrollView.getHeight()/10;
+            musicListLabel.setText(R.string.list_user_top);
 
-                musicListLabel.setText(R.string.list_user_top);
+            // add each track to the verticalLayout as a button
 
-                // add each track to the verticalLayout as a button
+            try {
+                JSONArray items = response.getJSONArray("items");
+                for(int i = 0; i < items.length(); i ++){
+                    //JSONObject item = items.getJSONObject(i);
+                    JSONObject track = items.getJSONObject(i);
+                    String trackname = track.getString("name");
+                    JSONArray artists = track.getJSONArray("artists");
 
-                try {
-                    JSONArray items = response.getJSONArray("items");
-                    for(int i = 0; i < items.length(); i ++){
-                        //JSONObject item = items.getJSONObject(i);
-                        JSONObject track = items.getJSONObject(i);
-                        String trackname = track.getString("name");
-                        JSONArray artists = track.getJSONArray("artists");
+                    String uri = track.getString("uri");
+                    JSONObject album = track.getJSONObject("album");
+                    JSONArray images = album.getJSONArray("images");
+                    JSONObject image;
+                    String imageURL = "";
 
-                        String uri = track.getString("uri");
-                        JSONObject album = track.getJSONObject("album");
-                        JSONArray images = album.getJSONArray("images");
-                        JSONObject image;
-                        String imageURL = "";
-
-                        // get the first image only
-                        if(images.length() > 0){
-                            image = images.getJSONObject(0);
-                            imageURL = image.getString("url");
-                        }
-
-
-                        // horizontal entry for this track
-                        LinearLayout entry = new LinearLayout(getApplicationContext());
-                        entry.setOrientation(LinearLayout.HORIZONTAL);
-                        LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightEntry);
-                        layoutParams.setMargins(20 , 20, 20, 20);
-                        entry.setLayoutParams(layoutParams);
-
-
-                        // create text for track title
-                        TextView textview = new TextView(getApplicationContext());
-                        textview.setText(trackname);
-                        layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-                        layoutParams.setMargins(0, 10, 0, 10);
-                        textview.setLayoutParams(layoutParams);
-                        textview.setTextColor(Color.WHITE);
-
-                        // autoscroll feature - if the text is longer than the length of textview
-                        textview.setHorizontallyScrolling(true);
-                        textview.setSingleLine();
-                        textview.setEllipsize(TextUtils.TruncateAt.MARQUEE);
-                        textview.setMarqueeRepeatLimit(-1);
-                        textview.setSelected(true);
-
-                        // create text for track artists
-                        TextView artisttextview = new TextView(getApplicationContext());
-                        String artistString = "";
-                        for(int j = 0; j < artists.length(); j++){
-                            if(j > 0){
-                                artistString += ", ";
-                            }
-
-                            artistString += artists.getJSONObject(j).getString("name");
-
-                        }
-
-                        artisttextview.setText(artistString);
-                        artisttextview.setLayoutParams(layoutParams);
-                        artisttextview.setTextColor(Color.WHITE);
-
-                        // autoscroll feature - if the text is longer than the length of textview
-                        artisttextview.setHorizontallyScrolling(true);
-                        artisttextview.setSingleLine();
-                        artisttextview.setEllipsize(TextUtils.TruncateAt.MARQUEE);
-                        artisttextview.setMarqueeRepeatLimit(-1);
-                        artisttextview.setSelected(true);
-
-                        // to vertically place track-name and artist-name textviews next to the album photo
-                        LinearLayout innerlayout = new LinearLayout(getApplicationContext());
-                        innerlayout.setOrientation(LinearLayout.VERTICAL);
-                        layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.MATCH_PARENT);
-                        layoutParams.setMargins(20, 0, 0, 0);
-                        innerlayout.setLayoutParams(layoutParams);
-
-                        innerlayout.addView(textview);
-                        innerlayout.addView(artisttextview);
-
-                        ImageView imageView = new ImageView(getApplicationContext());
-                        imageView.setAdjustViewBounds(true);
-                        imageView.setMaxWidth(320);
-
-                        Picasso.get().load(imageURL).fit().placeholder(R.drawable.ic_launcher_foreground).error(R.drawable.ic_launcher_foreground).into(imageView);
-
-                        entry.addView(imageView);
-                        entry.addView(innerlayout);
-
-                        // on click function - play the track
-                        entry.setOnClickListener(new View.OnClickListener() {
-                            @Override
-                            public void onClick(View view) {
-
-                                //update alarm object in MainActivity
-                                alarmToChange.spotify_res_uri = uri;
-                                alarmToChange.spotify_res_name = trackname;
-                                musicButtonToChange.setText(trackname);
-
-                                // cancel old alarm
-                                mainActivityInstance.cancelAlarm(alarmToChange);
-                                // schedule new alarm
-                                mainActivityInstance.scheduleAlarm(alarmToChange);
-
-                                // play the resource
-                                if(mSpotifyAppRemote == null || !mSpotifyAppRemote.isConnected()){
-                                    connectAppRemote(uri);
-                                }
-                                else{
-                                    mSpotifyAppRemote.getPlayerApi().play(uri);
-                                }
-                            }
-                        });
-
-                        // add horiz layout to vert layout
-                        verticalLayout.addView(entry);
+                    // get the first image only
+                    if(images.length() > 0){
+                        image = images.getJSONObject(0);
+                        imageURL = image.getString("url");
                     }
-                } catch (JSONException e) {
-                    e.printStackTrace();
+
+
+                    // horizontal entry for this track
+                    LinearLayout entry = new LinearLayout(getApplicationContext());
+                    entry.setOrientation(LinearLayout.HORIZONTAL);
+                    LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, heightEntry);
+                    layoutParams.setMargins(20 , 20, 20, 20);
+                    entry.setLayoutParams(layoutParams);
+
+
+                    // create text for track title
+                    TextView textview = new TextView(getApplicationContext());
+                    textview.setText(trackname);
+                    layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    layoutParams.setMargins(0, 10, 0, 10);
+                    textview.setLayoutParams(layoutParams);
+                    textview.setTextColor(Color.WHITE);
+
+                    // autoscroll feature - if the text is longer than the length of textview
+                    textview.setHorizontallyScrolling(true);
+                    textview.setSingleLine();
+                    textview.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+                    textview.setMarqueeRepeatLimit(-1);
+                    textview.setSelected(true);
+
+                    // create text for track artists
+                    TextView artisttextview = new TextView(getApplicationContext());
+                    String artistString = "";
+                    for(int j = 0; j < artists.length(); j++){
+                        if(j > 0){
+                            artistString += ", ";
+                        }
+
+                        artistString += artists.getJSONObject(j).getString("name");
+
+                    }
+
+                    artisttextview.setText(artistString);
+                    artisttextview.setLayoutParams(layoutParams);
+                    artisttextview.setTextColor(Color.WHITE);
+
+                    // autoscroll feature - if the text is longer than the length of textview
+                    artisttextview.setHorizontallyScrolling(true);
+                    artisttextview.setSingleLine();
+                    artisttextview.setEllipsize(TextUtils.TruncateAt.MARQUEE);
+                    artisttextview.setMarqueeRepeatLimit(-1);
+                    artisttextview.setSelected(true);
+
+                    // to vertically place track-name and artist-name textviews next to the album photo
+                    LinearLayout innerlayout = new LinearLayout(getApplicationContext());
+                    innerlayout.setOrientation(LinearLayout.VERTICAL);
+                    layoutParams = new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT,LinearLayout.LayoutParams.MATCH_PARENT);
+                    layoutParams.setMargins(20, 0, 0, 0);
+                    innerlayout.setLayoutParams(layoutParams);
+
+                    innerlayout.addView(textview);
+                    innerlayout.addView(artisttextview);
+
+                    ImageView imageView = new ImageView(getApplicationContext());
+                    imageView.setAdjustViewBounds(true);
+                    imageView.setMaxWidth(320);
+
+                    Picasso.get().load(imageURL).fit().placeholder(R.drawable.ic_launcher_foreground).error(R.drawable.ic_launcher_foreground).into(imageView);
+
+                    entry.addView(imageView);
+                    entry.addView(innerlayout);
+
+                    // on click function - play the track
+                    entry.setOnClickListener(new View.OnClickListener() {
+                        @Override
+                        public void onClick(View view1) {
+
+                            //update alarm object in MainActivity
+                            alarmToChange.spotify_res_uri = uri;
+                            alarmToChange.spotify_res_name = trackname;
+                            musicButtonToChange.setText(trackname);
+
+                            // cancel old alarm
+                            mainActivityInstance.cancelAlarm(alarmToChange);
+                            // schedule new alarm
+                            mainActivityInstance.scheduleAlarm(alarmToChange);
+
+                            // play the resource
+                            if(mSpotifyAppRemote == null || !mSpotifyAppRemote.isConnected()){
+                                connectAppRemote(uri);
+                            }
+                            else{
+                                mSpotifyAppRemote.getPlayerApi().play(uri);
+                            }
+                        }
+                    });
+
+                    // add horiz layout to vert layout
+                    verticalLayout.addView(entry);
                 }
+            } catch (JSONException e) {
+                e.printStackTrace();
             }
         });
 
@@ -237,7 +388,7 @@ public class MusicSelector extends AppCompatActivity {
 
                 verticalLayout.removeAllViews();
 
-                int heightEntry = scrollView.getHeight()/10;
+                //int heightEntry = scrollView.getHeight()/10;
 
                 musicListLabel.setText(R.string.list_rise_playlist);
 
@@ -389,7 +540,10 @@ public class MusicSelector extends AppCompatActivity {
 
                 verticalLayout.removeAllViews();
 
-                int heightEntry = scrollView.getHeight()/10;
+                // initialize entry height
+                if(heightEntry == -1) {
+                    heightEntry = scrollView.getHeight() / 10;
+                };
 
                 musicListLabel.setText(R.string.list_user_lib);
 
@@ -586,9 +740,7 @@ public class MusicSelector extends AppCompatActivity {
                     // Handle successful response
                     accToken = response.getAccessToken();
                     // load user's library tracks by default
-                   // requestUserLibraryTracks(null);
-                    //requestUserFavorites(null);
-                    requestRisePlaylist(null);
+                    requestUserLibraryTracks(null);
                     break;
 
                 // Auth flow returned an error
@@ -604,6 +756,7 @@ public class MusicSelector extends AppCompatActivity {
             }
         }
     }
+
 
 
     @Override
