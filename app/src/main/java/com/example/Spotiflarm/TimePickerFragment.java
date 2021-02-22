@@ -19,6 +19,8 @@ import android.widget.Button;
 import android.widget.TimePicker;
 import android.widget.Toast;
 
+import com.spotify.protocol.client.CallResult;
+
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -35,12 +37,15 @@ public class TimePickerFragment extends DialogFragment implements TimePickerDial
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         // Use the current time as the default values for the picker
 
+
+
+        Alarm alarm = MainActivity.mainActivityInstance.alarmToChange;
+
         final Calendar c = Calendar.getInstance();
-        int hour = c.get(Calendar.HOUR_OF_DAY);
-        int minute = c.get(Calendar.MINUTE);
+        c.setTimeInMillis(alarm.timeInMillis);
 
         // Create a new instance of TimePickerDialog and return it
-        return new TimePickerDialog(getActivity(), this, hour, minute,
+        return new TimePickerDialog(getActivity(), this, c.get(Calendar.HOUR), c.get(Calendar.MINUTE),
                 DateFormat.is24HourFormat(getActivity()));
     }
 
